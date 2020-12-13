@@ -5,6 +5,7 @@ import torch
 from torch.autograd import Function
 from torchvision import models
 
+
 class FeatureExtractor():
     """ Class for extracting activations and 
     registering gradients from targetted intermediate layers """
@@ -49,10 +50,10 @@ class ModelOutputs():
                 target_activations, x = self.feature_extractor(x)
             elif "avgpool" in name.lower():
                 x = module(x)
-                x = x.view(x.size(0),-1)
+                x = x.view(x.size(0), -1)
             else:
                 x = module(x)
-        
+
         return target_activations, x
 
 
@@ -100,7 +101,7 @@ class GradCam:
         else:
             features, output = self.extractor(input)
 
-        if index == None:
+        if index is None:
             index = np.argmax(output.cpu().data.numpy())
         # one_hot = np.zeros((1, output.size()[-1]), dtype=np.float32)
         one_hot = torch.zeros_like(output)
@@ -169,7 +170,7 @@ class GuidedBackpropReLUModel:
                 recursive_relu_apply(module)
                 if module.__class__.__name__ == 'ReLU':
                     module_top._modules[idx] = GuidedBackpropReLU.apply
-                
+
         # replace ReLU with GuidedBackpropReLU
         recursive_relu_apply(self.model)
 
@@ -188,7 +189,6 @@ class GuidedBackpropReLUModel:
         one_hot = np.zeros((1, output.size()[-1]), dtype=np.float32)
         one_hot[0][index] = 1
         one_hot = torch.from_numpy(one_hot).requires_grad_(True)
-        a = one_hot*output
         if self.cuda:
             one_hot = torch.sum(one_hot.cuda() * output)
         else:
@@ -219,6 +219,7 @@ def get_args():
 
     return args
 
+
 def deprocess_image(img):
     """ see https://github.com/jacobgil/keras-grad-cam/blob/master/grad-cam.py#L65 """
     img = img - np.mean(img)
@@ -226,13 +227,12 @@ def deprocess_image(img):
     img = img * 0.1
     img = img + 0.5
     img = np.clip(img, 0, 1)
-    return np.uint8(img*255)
+    return np.uint8(img * 255)
 
 
 def image2tensor(frame):
     img = torch.from_numpy(frame).float()
     img = img.div(255.0)
-    # img = img.cuda()
     img = img.unsqueeze(0)
     img = img.permute(0, 3, 1, 2)
     return img
@@ -273,7 +273,7 @@ if __name__ == '__main__':
     gb = gb_model(input, index=target_index)
     gb = gb.transpose((1, 2, 0))
     cam_mask = cv2.merge([mask, mask, mask])
-    cam_gb = deprocess_image(cam_mask*gb)
+    cam_gb = deprocess_image(cam_mask * gb)
     gb = deprocess_image(gb)
 
     cv2.imwrite('gb.jpg', gb)
